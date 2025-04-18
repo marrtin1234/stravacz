@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="cs">
+
+
+<?xml version="1.0" encoding="utf-8" ?>
+ <configuration>
+    <system.webserver>
+      <httpprotocol>
+        <customheaders>
+           <add name="Access-Control-Allow-Origin" value="" />
+        </customheaders>
+      </httpprotocol>
+    </system.webserver>
+ </configuration>
+
+
+
+<head>
+  <meta charset="UTF-8">
+  <title>Jídelníček</title>
+  <style>
+    body { font-family: Arial, sans-serif; padding: 1em; }
+    .den { border: 1px solid #ccc; border-radius: 8px; margin: 1em 0; padding: 1em; }
+    h2 { margin-top: 0; }
+    .jidlo { margin-bottom: 0.5em; }
+    .alergeny { font-size: 0.9em; color: #666; }
+  </style>
+</head>
+<body>
+  <h1>Jídelníček</h1>
+  <label for="jidelnac">Zadej číslo jídelny:</label>
+  <input type="text" id="jidelnac" value="3158">
+  <button onclick="nactiJidelnicek()">Načíst</button>
+
+  <div id="jidelnicek"></div>
+
+  <script>
+    async function nactiJidelnicek() {
+      const zarizeni = document.getElementById('jidelnac').value;
+      const url = `https://www.strava.cz/foxisapi/foxisapi.dll/istravne.istravne.process?xmljidelnickyA&zarizeni=${zarizeni}&jazyk=CZ&httphlavicka=A`;
+
+      try {
+        const response = await fetch(url);
+        const text = await response.text();
+        const parser = new DOMParser();
+        const xml = parser.parseFromString(text, "text/xml");
+
+        const dny = xml.getElementsByTagName("den");
+        const vystup = document.getElementById("jidelnicek");
+        vystup.innerHTML = "";
+
+        for (let den of dny) {
+          const datum = den.getAttribute("datum");
+          const polozky = den.getElementsByTagName("polozka");
+
+          const divDen = document.createElement("div");
+          divDen.className = "den";
+          divDen.innerHTML = `<h2>${datum}</h2>`;
+
+          for (let polozka of polozky) {
+            const druh = polozka.getAttribute("druh");
+            const nazev = polozka.getElementsByTagName("nazev")[0]?.textContent || "";
+            const alergeny = Array.from(polozka.getElementsByTagName("alergen"))
+              .map(a => a.textContent).join(", ");
+
+            const divJidlo = document.createElement("div");
+            divJidlo.className = "jidlo";
+            divJidlo.innerHTML = `<strong>${druh}:</strong> ${nazev}<br><span class="alergeny">Alergeny: ${alergeny}</span>`;
+            divDen.appendChild(divJidlo);
+          }
+
+          vystup.appendChild(divDen);
+        }
+      } catch (err) {
+        alert("Nepodařilo se načíst data.");
+        console.error(err);
+      }
+    }
+  </script>
+</body>
+</html>
